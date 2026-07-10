@@ -109,7 +109,7 @@ flowchart LR
 |---|---|---|
 | 저장소 | [fried-pollack-ai](https://github.com/s1ns3nz0/fried-pollack-ai) | [pollack-ai](https://github.com/s1ns3nz0/pollack-ai) |
 | 엔진 | LangGraph — recon→plan→HITL→exec→report | 6-에이전트 SOC 그래프 + 3 주기 워커 |
-| 규모 | Python 197 모듈·원자 액션 22·무기고 23종·테스트 616 | investigation/report/response + 상관·킬웹·CACAO |
+| 규모 | Python 197 모듈·원자 액션 22·무기고 23종·테스트 624 | investigation/report/response + 상관·킬웹·CACAO |
 | 통제 | RoE 게이트·HITL·allowlist (모델 밖 결정론) | 정책 하한 + METT-TC 상승·HITL 강제·guardrail |
 | 산출 | `UAV*_CL` 행 + SOC Alert | 탐지·차단·RTL·룰 후보 |
 
@@ -159,9 +159,16 @@ flowchart LR
 | 구분 | 짧은 로컬 데모 | Azure 풀 배포 |
 |---|---|---|
 | 실행 | `python demo.py` + `python run.py --emit-soc` | `bash scripts/deploy-judge-demo.sh` |
+| 시간 | 수분 | 수십 분(Azure 프로비저닝 상황에 따라 변동) |
 | 비용 | Azure 비용 없음 | AKS·Firewall·Log Analytics·Sentinel·AOAI 등 과금 |
+| 준비물 | Python 3.11+ | Azure Owner·`az` 로그인·20 vCPU 쿼터·`kubectl`·`kubelogin`·Helm·Python |
 | 모델 | 호스팅 모델 불필요 | Azure OpenAI `gpt-4o-mini` 사용 |
-| 통제 | 결정론 Gate·HITL·ground truth | 동일한 결정론 Gate·HITL이 최종 권한 유지 |
+| 모델 역할 | LLM 없이 결정론 그래프 실행 | kagent 상호작용·추론 보조·요약; 실행 승인권 없음 |
+| 통제 | 결정론 Gate·HITL·ground truth | 동일한 결정론 Gate·HITL·ground truth가 최종 권한 유지 |
+| SOC 증거 | `out/`의 UAV*_CL·Alert 계약 에뮬레이션 | 실제 Log Analytics·Microsoft Sentinel 리소스 |
+| 격리 증거 | 코드·테스트·아키텍처 | sim/SOC/red 별도 AKS와 Azure 네트워크 경계 |
+| 화면 | KPI 정적 HTML | KPI·kagent UI·선택적 ArgoCD·Azure Portal deep link |
+| 한계 | 실제 Azure 제어평면 격리를 증명하지 않음 | 비용·쿼터·Azure OpenAI 접근 권한 필요 |
 
 ### 짧은 데모
 
@@ -174,6 +181,10 @@ python demo.py
 python run.py --emit-soc
 python -m redteam_core.kpi.dashboard
 ```
+
+이 경로의 SOC Alert는 실제 Sentinel 탐지가 아니라 동일한 UAV*_CL 계약을 재현한
+로컬 산출물입니다. 대신 API 키나 호스팅 모델 없이 핵심 안전·검증 로직을 확인할 수
+있습니다.
 
 ### Azure 풀 배포
 
@@ -195,6 +206,12 @@ bash scripts/deploy-judge-demo.sh
 
 Azure 리소스의 Portal 링크와 실제 포트는 배포 환경에 따라 달라질 수 있으므로,
 풀 배포 후 터미널에 표시된 스크립트 결과를 확인하세요.
+
+포트포워드 PID·로그·kubeconfig는 `/tmp/fried-pollack-judge-demo/`에 저장됩니다.
+
+```bash
+bash scripts/stop-judge-demo.sh  # 로컬 대시보드만 종료; Azure 리소스는 유지
+```
 
 > 풀 배포는 실제 Azure 과금 리소스를 생성합니다. 데모 후 리소스 그룹을
 > 수동 삭제하고, 상세 절차는 `fried-pollack-ai/deploy/JUDGE-DEPLOY.md`를 확인하세요.

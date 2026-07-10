@@ -11,6 +11,14 @@ vm_size_vcpus() {
   esac
 }
 
+red_capacity_wait_required() {
+  if [[ -z "${1:-}" ]]; then
+    printf 'true\n'
+  else
+    printf 'false\n'
+  fi
+}
+
 topology_vcpus() {
   if (( $# != 8 )); then
     echo "topology_vcpus requires four VM-size/node-count pairs" >&2

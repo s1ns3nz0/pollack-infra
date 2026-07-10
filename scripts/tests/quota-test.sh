@@ -25,6 +25,8 @@ assert_eq 20 "$(
     Standard_D2s_v5 1 \
     Standard_D2s_v5 1
 )" "for the lab topology"
+assert_eq true "$(red_capacity_wait_required '')" "when red AKS is absent"
+assert_eq false "$(red_capacity_wait_required '/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ContainerService/managedClusters/red')" "when red AKS already exists"
 
 if vm_size_vcpus Standard_Unknown >/dev/null 2>&1; then
   echo "FAIL: unknown VM size was accepted" >&2

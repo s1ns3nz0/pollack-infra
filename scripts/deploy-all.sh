@@ -21,6 +21,8 @@ LOCATION="${LOCATION:-koreacentral}"
 DATA_RG="${DATA_RG:-dah-data-rg}"
 SOC_RG="${SOC_RG:-dah-soc-rg}"
 SIM_RG="${SIM_RG:-dah-sim-rg}"
+RED_RG="${RED_RG:-dah-red-rg}"
+RED_AKS_NAME="${RED_AKS_NAME:-dah-red-aks}"
 RED_PARAM_FILE="${RED_PARAM_FILE:-bicep/params/lab.bicepparam}"
 DEPLOY_SIM_VM="${DEPLOY_SIM_VM:-false}"   # VM host needs SSH key + allowed IP
 SIM_NODE_SIZE="${SIM_NODE_SIZE:-Standard_D4s_v5}"
@@ -91,8 +93,15 @@ RED_VCPUS=$((
   $(vm_size_vcpus "$RED_SYSTEM_NODE_SIZE") * RED_SYSTEM_NODE_COUNT +
   $(vm_size_vcpus "$RED_USER_NODE_SIZE") * RED_USER_NODE_COUNT
 ))
-wait_for_regional_vcpu_capacity \
-  "$LOCATION" "$RED_VCPUS" "$QUOTA_WAIT_TIMEOUT" "$QUOTA_POLL_SECONDS"
+EXISTING_RED_AKS_ID="$(
+  az aks show -g "$RED_RG" -n "$RED_AKS_NAME" --query id -o tsv 2>/dev/null || true
+)"
+if [[ "$(red_capacity_wait_required "$EXISTING_RED_AKS_ID")" == true ]]; then
+  wait_for_regional_vcpu_capacity \
+    "$LOCATION" "$RED_VCPUS" "$QUOTA_WAIT_TIMEOUT" "$QUOTA_POLL_SECONDS"
+else
+  echo "red AKS already exists; no additional regional vCPU capacity is required"
+fi
 az deployment sub create --location "$LOCATION" \
   --template-file bicep/main.bicep --parameters "$RED_PARAM_FILE" \
   azureOpenAIResourceGroupName="$SOC_RG" \
