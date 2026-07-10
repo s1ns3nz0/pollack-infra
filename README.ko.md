@@ -12,15 +12,15 @@
 ![Loop](https://img.shields.io/badge/OCO%E2%86%94DCO-closed%20loop-e11d48)
 ![Region](https://img.shields.io/badge/region-Korea%20Central%2FSouth-0078D4)
 
-## Visual Overview
+## 시각 자료
 
-### Cyber Operations Staff Dashboard
+### 사이버 작전 참모 상황판
 
-![Cyber Operations Staff Dashboard](images/fig-cyber-staff-dashboard.png)
+![사이버 작전 참모 상황판](images/fig-cyber-staff-dashboard.png)
 
-### SOC Detection Coverage KPI Dashboard
+### SOC 탐지 커버리지 KPI 대시보드
 
-![SOC Detection Coverage KPI Dashboard](images/fig-kpi-dashboard.png)
+![SOC 탐지 커버리지 KPI 대시보드](images/fig-kpi-dashboard.png)
 
 **pollack** 은 KUS-FS급 MUAV 임무 시스템을 대상으로 **공격 AI ↔ 방어 AI를 하나의
 폐루프로 돌리는** UAV 사이버 레인지다. 이 저장소(`pollack-infra`)는 그 레인지를
