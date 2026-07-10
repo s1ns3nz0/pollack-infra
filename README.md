@@ -167,24 +167,104 @@ flowchart LR
 | 통제 | 결정론 Gate·HITL·ground truth | 동일한 결정론 Gate·HITL·ground truth가 최종 권한 유지 |
 | SOC 증거 | `out/`의 UAV*_CL·Alert 계약 에뮬레이션 | 실제 Log Analytics·Microsoft Sentinel 리소스 |
 | 격리 증거 | 코드·테스트·아키텍처 | sim/SOC/red 별도 AKS와 Azure 네트워크 경계 |
-| 화면 | KPI 정적 HTML | 참모 상황판·KPI·kagent UI·ArgoCD·Azure Portal deep link |
+| 화면 | CLI 킬체인 결과·KPI HTML·로컬 참모 상황판 | 참모 상황판·KPI·kagent UI·ArgoCD·Azure Portal deep link |
 | 한계 | 실제 Azure 제어평면 격리를 증명하지 않음 | 비용·쿼터·Azure OpenAI 접근 권한 필요 |
 
 ### 짧은 데모
 
+짧은 데모는 Azure 리소스를 만들지 않고 노트북에서 핵심 레드팀 판단 흐름을
+재현합니다. 심사위원은 공격 성공 여부만 보는 것이 아니라, 위험 단계가 어떤
+근거로 차단되는지, 실행 결과가 SOC 증거와 KPI로 어떻게 이어지는지까지 확인할 수
+있습니다. 전체 실행에는 API 키나 호스팅 AI 모델이 필요하지 않습니다.
+
+#### 1. 준비
+
 ```bash
+git clone https://github.com/s1ns3nz0/pollack-infra.git
 git clone https://github.com/s1ns3nz0/fried-pollack-ai.git
+git clone https://github.com/s1ns3nz0/pollack-ai.git
 cd fried-pollack-ai
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+세 저장소는 같은 상위 디렉터리에 둡니다. `fried-pollack-ai`가 레드팀 실행과 KPI를,
+`pollack-ai`가 로컬 사이버 작전 참모 화면을, `pollack-infra`가 Azure 풀 배포와
+배포 생명주기 스크립트를 담당합니다.
+
+#### 2. 킬체인과 안전 통제 확인
+
+```bash
 python demo.py
+```
+
+이 명령은 UAV 공격 킬체인의 정찰, 모드 변경, 강제 무장, 이륙 시도를 순서대로
+실행합니다. 읽기·저위험 쓰기·고위험 쓰기·물리적 비가역 단계가 서로 다른 정책으로
+처리되며, 이륙처럼 물리적으로 위험한 작업은 인간 승인 전용 HITL gate에서
+차단됩니다. 취약 인스턴스와 하드닝 인스턴스의 차이, ground-truth 검증률, 오탐
+회피, 물리 안전 위반 건수도 함께 출력됩니다.
+
+심사 시에는 다음 결과를 확인합니다.
+
+- `force_arm`까지 검증된 통제 획득 능력
+- `takeoff`의 물리적 비가역 작업 차단
+- 명령 ACK와 실제 기체 상태를 분리하는 ground-truth 검증
+- `physical_safety_violations: 0`과 `PASS_safety: true`
+
+#### 3. SOC 계약 산출물 생성
+
+```bash
 python run.py --emit-soc
+```
+
+동일한 킬체인을 LangGraph 기반 실행기로 수행하고, 결과를 SOC가 소비할 수 있는
+계약 형태로 변환합니다. 실행 후 다음 파일이 `fried-pollack-ai/out/`에 생성됩니다.
+
+| 산출물 | 내용 |
+|---|---|
+| `uav_cl_rows.ndjson` | UAV 통신·운용 이벤트를 재현한 UAV*_CL 행 |
+| `soc_alert.json` | 탐지 신호, 심각도, MITRE ATT&CK 기법이 포함된 Alert 계약 |
+
+기본 시나리오에서는 MAVLink 5790 연결과 비인가 system ID의 명령을 탐지 신호로
+생성합니다. 이 단계는 공격 실행 결과가 단순한 콘솔 메시지로 끝나지 않고 SOC
+증거로 연결되는 것을 보여줍니다.
+
+#### 4. KPI와 참모 화면 확인
+
+KPI HTML을 생성합니다.
+
+```bash
 python -m redteam_core.kpi.dashboard
 ```
 
-이 경로의 SOC Alert는 실제 Sentinel 탐지가 아니라 동일한 UAV*_CL 계약을 재현한
-로컬 산출물입니다. 대신 API 키나 호스팅 모델 없이 핵심 안전·검증 로직을 확인할 수
-있습니다.
+생성된 `out/kpi-dashboard.html`을 브라우저에서 직접 열거나 로컬 HTTP 서버로
+제공할 수 있습니다.
+
+```bash
+python -m http.server 18082 --bind 127.0.0.1 --directory out
+# http://localhost:18082/kpi-dashboard.html
+```
+
+사이버 작전 참모 상황판도 확인하려면 별도 터미널에서 실행합니다.
+
+```bash
+cd ../pollack-ai
+python -m pip install -e .
+uvicorn app.dashboard:app --host 127.0.0.1 --port 18083
+# http://localhost:18083
+```
+
+각 서버는 해당 터미널에서 `Ctrl-C`로 종료합니다. 로컬 데모의 SOC 데이터는 동일한
+UAV*_CL·Alert 계약을 재현한 `out/` 산출물이며, API 키나 호스팅 모델 없이 핵심
+안전·검증 로직과 화면 동작을 빠르게 심사하는 데 사용합니다.
+
+#### 5. 풀 배포와의 차이
+
+짧은 데모에서는 AKS, Log Analytics, Microsoft Sentinel, Azure OpenAI, kagent,
+ArgoCD를 설치하지 않습니다. 따라서 몇 분 안에 핵심 킬체인·안전 gate·SOC 증거·KPI를
+확인할 수 있고 Azure 비용도 발생하지 않습니다. 풀 배포는 동일한 결정론적 통제를
+유지하면서 sim/SOC/red AKS 격리, Azure OpenAI `gpt-4o-mini`, kagent Agent와 MCP
+도구, ArgoCD 및 Azure Portal 증거를 추가합니다.
 
 ### Azure 풀 배포
 
