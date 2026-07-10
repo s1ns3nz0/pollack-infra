@@ -77,13 +77,20 @@ Committed:
 - `modules/private-dns.bicep` — split-horizon `*.pollak.store` private zones
 - red↔sim / red↔soc VNet peering — in `modules/network-red.bicep` (gated on
   `simVnetResourceId` / `enableSoc`)
-- `modules/shared/log-analytics.bicep` + `shared.bicep` — the shared SIEM
-  workspace (detection-path decoupling point), append-only intent documented
+- `modules/shared/log-analytics.bicep` — the shared SIEM workspace
+  (detection-path decoupling point), RBAC-only, daily ingestion cap
+- `modules/shared/telemetry-ingest.bicep` — DCE + DCR + the four `UAV*_CL`
+  custom tables the tap emits, plus the append-only role assignments:
+  tap → Monitoring Metrics Publisher **on the DCR** (ingest only), SOC → Log
+  Analytics Reader **on the workspace** (query only). Red gets nothing here.
+- `shared.bicep` wires all of the above (subscription scope)
 
-Not yet coded:
-- the Data Collection Rule + `UAV*_CL` custom-table schema for the sim tap
-- the tap (Monitoring Metrics Publisher on the DCR) and SOC (Log Analytics
-  Reader) role assignments that enforce append-only at the data layer
+Wire-up pending (needs identities that don't exist until the sim/soc planes are
+built): pass `tapPrincipalId` / `socReaderPrincipalId` to `shared.bicep` once the
+tap and SOC managed identities exist — until then those role assignments are
+skipped (empty-guarded). Extend `tableSchemas` in `telemetry-ingest.bicep` as the
+tap emits more `UAV*_CL` tables.
 
-Until the DCR lands, the detection contract is reproduced by the red app repo's
-Tier-0 emulation (`run.py --emit-soc`); see that repo's `deploy/JUDGE-DEPLOY.md`.
+The red app repo's Tier-0 emulation (`run.py --emit-soc`) reproduces the same
+detection contract without deploying this pipeline; see that repo's
+`deploy/JUDGE-DEPLOY.md`.

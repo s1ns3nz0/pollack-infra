@@ -17,6 +17,12 @@ param sharedResourceGroupName string = 'dah-shared-rg'
 @description('Daily ingestion cap in GB for the shared workspace (cost guard).')
 param dailyQuotaGb int = 1
 
+@description('Principal ID of the sim-plane tap identity (ingest-only on the DCR). Empty until the tap identity exists.')
+param tapPrincipalId string = ''
+
+@description('Principal ID of the SOC reader identity (read-only on the workspace). Empty until the SOC identity exists.')
+param socReaderPrincipalId string = ''
+
 var commonTags = {
   project: 'dah'
   plane: 'shared'
@@ -44,6 +50,22 @@ module law 'modules/shared/log-analytics.bicep' = {
   }
 }
 
+module ingest 'modules/shared/telemetry-ingest.bicep' = {
+  name: 'shared-telemetry-ingest'
+  scope: resourceGroup(sharedResourceGroupName)
+  params: {
+    location: location
+    workspaceName: law.outputs.workspaceName
+    workspaceId: law.outputs.workspaceId
+    tapPrincipalId: tapPrincipalId
+    socReaderPrincipalId: socReaderPrincipalId
+    tags: commonTags
+  }
+}
+
 output sharedResourceGroupName string = sharedResourceGroupName
 output workspaceId string = law.outputs.workspaceId
 output workspaceName string = law.outputs.workspaceName
+output dcrId string = ingest.outputs.dcrId
+output dcrImmutableId string = ingest.outputs.dcrImmutableId
+output dceLogsIngestionEndpoint string = ingest.outputs.dceLogsIngestionEndpoint
