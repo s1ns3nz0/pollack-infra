@@ -1,0 +1,4 @@
+*.json
+!bicep/params/*.json
+.DS_Store
+out/
