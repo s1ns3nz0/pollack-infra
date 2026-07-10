@@ -20,69 +20,6 @@
 폐루프로 돌리는** UAV 사이버 레인지다. 이 저장소(`pollack-infra`)는 그 레인지를
 띄우는 Azure 인프라(IaC)와 평면 사이 이음새를 소유한다.
 
-## 심사위원용 데모
-
-시간과 Azure 권한에 따라 두 경로 중 하나를 선택한다. 짧은 데모는 핵심 계약을
-빠르게 재현하고, 풀 배포는 같은 애플리케이션을 실제 3-plane Azure 경계에서 검증한다.
-
-| 구분 | 짧은 로컬 데모 | Azure 풀 배포 |
-|---|---|---|
-| 실행 | `python demo.py` + `python run.py --emit-soc` | `bash scripts/deploy-judge-demo.sh` |
-| 시간 | 수분 | 수십 분(Azure 프로비저닝 상황에 따라 변동) |
-| 비용 | Azure 비용 없음 | AKS·Firewall·Log Analytics·Sentinel·AOAI·ACR·Storage 과금 |
-| 준비물 | Python 3.11+ | Azure Owner, `az` 로그인, 20 vCPU 쿼터, `kubectl`·`kubelogin`·Helm·Python |
-| AI 모델 | 호스팅 모델 불필요 | kagent가 Azure OpenAI `gpt-4o-mini`(`gpt-4o-soc`) 사용 |
-| 모델 역할 | LLM 없이 결정론 그래프 실행 | 상호작용·추론 보조·요약; 실행 승인권 없음 |
-| 권한 통제 | 결정론 Gate·HITL·ground truth | 동일한 결정론 Gate·HITL·ground truth가 최종 권한 유지 |
-| SOC 증거 | `out/`의 UAV*_CL·Alert 계약 에뮬레이션 | 실제 Log Analytics·Microsoft Sentinel 리소스 |
-| 격리 증거 | 코드·테스트·아키텍처 | sim/SOC/red 별도 AKS와 Azure 네트워크 경계 |
-| 화면 | KPI 정적 HTML | KPI·kagent UI·선택적 ArgoCD·Azure Portal deep link |
-| 한계 | 실제 Azure 제어평면 격리를 증명하지 않음 | 비용·쿼터·Azure OpenAI 접근 권한 필요 |
-
-### 짧은 데모 — Azure 없이 즉시 실행
-
-```bash
-git clone https://github.com/s1ns3nz0/fried-pollack-ai.git
-cd fried-pollack-ai
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python demo.py
-python run.py --emit-soc
-python -m redteam_core.kpi.dashboard
-```
-
-이 경로의 SOC Alert는 실제 Sentinel 탐지가 아니라 동일한 UAV*_CL 계약을 재현한
-로컬 산출물이다. 대신 API 키나 호스팅 모델 없이 핵심 안전·검증 로직을 확인할 수 있다.
-
-### 풀 배포 — 한 명령으로 3-plane과 대시보드 준비
-
-두 저장소를 같은 상위 디렉터리에 체크아웃한다.
-
-```bash
-git clone https://github.com/s1ns3nz0/pollack-infra.git
-git clone https://github.com/s1ns3nz0/fried-pollack-ai.git
-cd pollack-infra
-bash scripts/deploy-judge-demo.sh
-```
-
-완료 후 스크립트가 실제 응답을 확인하고 다음 링크를 출력한다.
-
-| 화면 | 기본 주소 |
-|---|---|
-| kagent UI | `http://localhost:18080` |
-| KPI Dashboard | `http://localhost:18082/kpi-dashboard.html` |
-| ArgoCD | `https://localhost:18081` — 설치된 경우; `INSTALL_ARGOCD=true`로 설치 요청 |
-| Sentinel·Log Analytics·AOAI·AKS·ACR·Storage | 현재 구독의 Azure Portal deep link |
-
-로컬 포트포워드의 PID·로그·kubeconfig는 `/tmp/fried-pollack-judge-demo/`에 저장된다.
-
-```bash
-bash scripts/stop-judge-demo.sh  # 로컬 대시보드만 종료; Azure 리소스는 삭제하지 않음
-```
-
-> **비용 주의:** 풀 배포는 실제 과금 리소스를 만든다. 심사가 끝나면 리소스 그룹을
-> 수동 삭제한다. 상세 수동 절차와 저비용 red-only 경로는
-> [`fried-pollack-ai/deploy/JUDGE-DEPLOY.md`](https://github.com/s1ns3nz0/fried-pollack-ai/blob/main/deploy/JUDGE-DEPLOY.md)를 참고한다.
 
 ## 설계 원칙
 
@@ -215,74 +152,6 @@ flowchart LR
 
 ![SOC 탐지 커버리지 KPI 대시보드](images/fig-kpi-dashboard.png)
 
-## 실행 방법
-
-### 1. 공격 에이전트 실행 ([fried-pollack-ai](https://github.com/s1ns3nz0/fried-pollack-ai))
-
-```bash
-python run.py --emit-soc     # 킬체인 실행 + UAV*_CL·SOC Alert 산출
-python run.py --hardened     # PoV 페어: 취약 인스턴스 성공 / 하드닝 인스턴스 거부 대조
-```
-
-`--emit-soc` 는 관측한 감사 이벤트를 `out/uav_cl_rows.ndjson`(UAV*_CL 행)과
-`out/soc_alert.json`으로 내보낸다 — 이게 방어측 입력이다. `--hardened` 는 같은
-공격을 서명(MAVLink2)·망분리·링크암호화로 거부해 "무방비 기체는 뚫리고 방비된
-기체는 막힌다"를 나란히 보여 준다. **외부 의존 없이 표준 라이브러리만으로 Tier 0
-재현**된다.
-
-### 2. 방어 에이전트 실행 ([pollack-ai](https://github.com/s1ns3nz0/pollack-ai))
-
-같은 스키마의 텔레메트리를 Azure Sentinel 또는 `sim_bridge`로 읽어 6-에이전트
-파이프라인(triage→investigation+hunt→validation+approval→response)을 돈다. LLM
-요약은 로컬 Ollama(`qwen2.5`)로 실연동되며 결정론 폴백을 갖춘다. 탐지 룰은
-[dah-sentinel-content](https://github.com/s1ns3nz0/dah-sentinel-content)의 165룰
-라이브러리에서 온다.
-
-### 3. Azure 인프라 배포
-
-레인지를 Azure에 올린다. 전체 스택을 의존순서로 배포한다.
-
-```bash
-scripts/deploy-all.sh    # data(SIEM) → aoai → sim → soc → red
-```
-
-red만 미리보기·배포하려면:
-
-```bash
-az deployment sub what-if --location koreacentral \
-  --template-file bicep/main.bicep --parameters bicep/params/lab.bicepparam
-
-scripts/deploy-red-with-sim.sh    # red (+ DEPLOY_SIM=true 시 sim 존재-시-건너뜀)
-```
-
-**자기 구독에 배포하는 리뷰어 (Path B):** `bicep/params/judge.bicepparam`를 복사해
-`REPLACE_*` 토큰을 채우고 `RED_PARAM_FILE`로 스크립트에 물린다. sim 레인지는 RG-scope
-(`bicep/planes/sim-aks.bicep`)로 `deploy-all.sh` 경유. 전체 런북은 red 앱 저장소의
-`deploy/JUDGE-DEPLOY.md` 참고.
-
-## 인프라 저장소 역할
-
-세 평면(🔴 red `dah-red-aks` / 🟡 sim `dah-sim-aks` / 🔵 soc `dah-soc-aks`)은 각각
-독립된 AKS 클러스터·VNet·리소스 그룹이다. red는 살아있는 공격 도구를 돌리므로,
-평면 경계는 **실제 신뢰경계**다. 어느 평면에도 속하지 않는 이음새가 여기 산다.
-
-- red↔sim VNet 피어링 + Azure Firewall 이그레스 허용목록 (공격 경로)
-- 공유 Sentinel / Log Analytics 워크스페이스 `dah-data-law` — sim은 append-only로
-  쓰고 soc는 읽는다 (탐지 경로, sim↔soc 직접 피어링 **없음**)
-- 프라이빗 DNS 존 (`*.pollack.store`) · 평면 경계를 강제하는 RBAC
-
-```
-bicep/
-  main.bicep · modules/                    # red 평면 (subscription 범위) + 모듈
-  planes/                                  # sim/soc/aoai/data (RG 범위, 라이브 canonical)
-    data.bicep(dah-data-law+Sentinel) · aoai.bicep(gpt-4o-mini)
-    sim-aks.bicep · sim-vm.bicep · soc.bicep
-  params/                                  # lab · judge 파라미터
-scripts/
-  deploy-all.sh              # 전체 스택 의존순서(data→aoai→sim→soc→red)
-  deploy-red-with-sim.sh     # red(+선택 sim)
-```
-
 ## 기반 기술
 
 [Kubernetes](https://kubernetes.io/) · [Helm](https://helm.sh/) ·
@@ -305,3 +174,38 @@ AI closed loop over a KUS-FS-class MUAV mission system. The red agent
 `run.py --emit-soc`; the blue agent (`pollack-ai`) consumes the same schema and
 detects/responds. This repo (`pollack-infra`) is the Azure IaC that stands the
 range up. Detection content ships from `dah-sentinel-content`.</sub>
+
+## 데모 실행
+
+시간과 Azure 권한에 따라 두 경로 중 하나를 선택합니다.
+
+| 구분 | 짧은 로컬 데모 | Azure 풀 배포 |
+|---|---|---|
+| 실행 | `python demo.py` + `python run.py --emit-soc` | `bash scripts/deploy-judge-demo.sh` |
+| 비용 | Azure 비용 없음 | AKS·Firewall·Log Analytics·Sentinel·AOAI 등 과금 |
+| 모델 | 호스팅 모델 불필요 | Azure OpenAI `gpt-4o-mini` 사용 |
+| 통제 | 결정론 Gate·HITL·ground truth | 동일한 결정론 Gate·HITL이 최종 권한 유지 |
+
+### 짧은 데모
+
+```bash
+git clone https://github.com/s1ns3nz0/fried-pollack-ai.git
+cd fried-pollack-ai
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python demo.py
+python run.py --emit-soc
+python -m redteam_core.kpi.dashboard
+```
+
+### Azure 풀 배포
+
+```bash
+git clone https://github.com/s1ns3nz0/pollack-infra.git
+git clone https://github.com/s1ns3nz0/fried-pollack-ai.git
+cd pollack-infra
+bash scripts/deploy-judge-demo.sh
+```
+
+> 풀 배포는 실제 Azure 과금 리소스를 생성합니다. 데모 후 리소스 그룹을
+> 수동 삭제하고, 상세 절차는 `fried-pollack-ai/deploy/JUDGE-DEPLOY.md`를 확인하세요.

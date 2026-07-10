@@ -31,7 +31,34 @@ the-loop approval control irreversible actions.
 
 ![SOC Detection Coverage KPI Dashboard](images/fig-kpi-dashboard.png)
 
-## Deploy
+## Demo
+
+Choose the local demo when Azure access is unavailable, or run the full
+three-plane deployment when infrastructure isolation must be demonstrated.
+
+### Local demo
+
+```bash
+git clone https://github.com/s1ns3nz0/fried-pollack-ai.git
+cd fried-pollack-ai
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python demo.py
+python run.py --emit-soc
+python -m redteam_core.kpi.dashboard
+```
+
+### Azure full deployment
+
+```bash
+git clone https://github.com/s1ns3nz0/pollack-infra.git
+git clone https://github.com/s1ns3nz0/fried-pollack-ai.git
+cd pollack-infra
+bash scripts/deploy-judge-demo.sh
+```
+
+The full demo creates billable Azure resources. Remove the resource group after
+the demo and see `fried-pollack-ai/deploy/JUDGE-DEPLOY.md` for the full runbook.
 
 ```bash
 scripts/deploy-all.sh
