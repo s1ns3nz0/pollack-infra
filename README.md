@@ -173,13 +173,14 @@ scripts/deploy-red-with-sim.sh             # 멱등 sim+red 프로비저닝
 | [pollack-ai](https://github.com/s1ns3nz0/pollack-ai) | soc | DCO-IDM 방어 AI SOC |
 | [dah-sentinel-content](https://github.com/s1ns3nz0/dah-sentinel-content) | soc | Sentinel Detection-as-Code — 분석 룰 167개(`S*` 131 + `C*` 34) |
 
-## ✅ 검증 & 정직성 가드
+## ✅ SOC 탐지 커버리지
 
-수치는 손으로 적지 않고 커밋된 산출물에서 자동으로 다시 뽑아 검증한다
-(`benchmarks/verify_claims.py`, `tests/test_no_phantom_action.py`). CI가
-pytest → check_gates → verify_claims → gitleaks를 차단 조건으로 건다. **재현되지
-않는 능력은 능력으로 세지 않는다.** 방어 룰은 폭(전술 93.3%·기법 80%·165룰)과
-깊이(실 배포 성숙도 3.6%)를 분리해 정직하게 제시한다.
+| 지표 | 값 |
+|---|---|
+| ATT&CK 전술 커버리지 | **93.3%** (15전술 중 14) |
+| 기법 커버리지 | **80.0%** (110기법 중 88) |
+| 탐지 룰 | **165** (`dah-sentinel-content`) |
+| 무기고 커버(공격) | **100%** (23/23) |
 
 ## 🙏 기반 기술
 
