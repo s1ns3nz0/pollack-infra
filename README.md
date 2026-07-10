@@ -12,6 +12,8 @@
 ![Loop](https://img.shields.io/badge/OCO%E2%86%94DCO-closed%20loop-e11d48)
 ![Region](https://img.shields.io/badge/region-Korea%20Central%2FSouth-0078D4)
 
+![Pollack Red and Blue Teams](images/pollack-red-blue-team.png)
+
 ## Visual Overview
 
 ### Cyber Operations Staff Dashboard
