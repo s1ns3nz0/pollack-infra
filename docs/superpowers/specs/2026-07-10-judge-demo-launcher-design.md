@@ -20,6 +20,9 @@ The project exposes two primary review paths:
 | Typical time | Minutes | Tens of minutes, subject to Azure provisioning |
 | Cost | No Azure cost | AKS, Firewall, Log Analytics, Sentinel, AOAI, ACR, and Storage charges |
 | Prerequisites | Python 3.11+ | Azure Owner access, Azure CLI login, quota, `kubectl`, `kubelogin`, Helm, and Python |
+| AI model | No hosted model required; deterministic graph and built-in approval callback | kagent uses Azure OpenAI `gpt-4o-mini` through the `gpt-4o-soc` deployment for agent interaction and summarization |
+| Model authority | No LLM participates in execution decisions | Azure OpenAI is advisory/orchestration-only; deterministic engagement gates, HITL policy, and ground-truth validation retain authority |
+| Offline behavior | Fully runnable without network model access | Requires a healthy Azure OpenAI account, deployment, credentials, and approved egress |
 | Attack pipeline | Real deterministic application code against the in-memory range | The same ToolServer and agent contract running on red AKS |
 | SOC evidence | Emulated contract artifacts in `out/` | Real Log Analytics and Microsoft Sentinel resources |
 | Isolation evidence | Architectural and test evidence | Separate sim, SOC, and red AKS clusters with live Azure boundaries |
@@ -28,7 +31,11 @@ The project exposes two primary review paths:
 
 The README will put this comparison near the quick-start section. It will not
 describe the short demo as a live Sentinel detection or imply that the full
-deployment is free or instantaneous.
+deployment is free or instantaneous. It will also avoid implying that the
+hosted model autonomously authorizes attacks: `gpt-4o-mini` provides the
+kagent-facing reasoning, interaction, and summary layer, while the ToolServer's
+deterministic graph owns scope enforcement, risk classification, HITL routing,
+execution policy, and ground-truth verification.
 
 ## Command Surface
 
@@ -141,6 +148,13 @@ change is pushed.
 The infrastructure README will gain a prominent reviewer quick start with the
 short/full comparison table, prerequisites, one-command invocation, example
 output, runtime directory, and stop command.
+
+The comparison will explicitly state that the short path demonstrates the
+model-independent core contribution and therefore needs no API key. The full
+path demonstrates the optional hosted-AI integration by running kagent against
+the Azure OpenAI `gpt-4o-soc` deployment backed by `gpt-4o-mini`. Both paths run
+the same deterministic safety and verification contract; adding the model does
+not grant it veto, scope, or execution authority.
 
 The application README and `deploy/JUDGE-DEPLOY.md` will point to the launcher
 for the complete three-plane path while retaining the existing manual steps as
