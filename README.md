@@ -152,29 +152,6 @@ flowchart LR
 
 ![SOC 탐지 커버리지 KPI 대시보드](images/fig-kpi-dashboard.png)
 
-## 기반 기술
-
-[Kubernetes](https://kubernetes.io/) · [Helm](https://helm.sh/) ·
-[kagent (CNCF)](https://kagent.dev/) · [Argo CD](https://argo-cd.readthedocs.io/) ·
-[OpenTelemetry](https://opentelemetry.io/) ·
-[Microsoft Sentinel](https://learn.microsoft.com/azure/sentinel/) ·
-[LangGraph](https://langchain-ai.github.io/langgraph/) ·
-[Ollama](https://ollama.com/) · [ArduPilot](https://ardupilot.org/)
-
-## 문의
-
-**s1ns3nz0** · GitHub [@s1ns3nz0](https://github.com/s1ns3nz0) — 버그·제안은 각
-저장소의 Issues로.
-
----
-
-<sub>🌐 EN: **pollack** is a UAV cyber range that runs an offensive AI ↔ defensive
-AI closed loop over a KUS-FS-class MUAV mission system. The red agent
-(`fried-pollack-ai`) executes kill chains and emits `UAV*_CL` telemetry via
-`run.py --emit-soc`; the blue agent (`pollack-ai`) consumes the same schema and
-detects/responds. This repo (`pollack-infra`) is the Azure IaC that stands the
-range up. Detection content ships from `dah-sentinel-content`.</sub>
-
 ## 데모 실행
 
 시간과 Azure 권한에 따라 두 경로 중 하나를 선택합니다.
@@ -209,3 +186,17 @@ bash scripts/deploy-judge-demo.sh
 
 > 풀 배포는 실제 Azure 과금 리소스를 생성합니다. 데모 후 리소스 그룹을
 > 수동 삭제하고, 상세 절차는 `fried-pollack-ai/deploy/JUDGE-DEPLOY.md`를 확인하세요.
+
+## 기반 기술
+
+[Kubernetes](https://kubernetes.io/) · [Helm](https://helm.sh/) ·
+[kagent (CNCF)](https://kagent.dev/) · [Argo CD](https://argo-cd.readthedocs.io/) ·
+[OpenTelemetry](https://opentelemetry.io/) ·
+[Microsoft Sentinel](https://learn.microsoft.com/azure/sentinel/) ·
+[LangGraph](https://langchain-ai.github.io/langgraph/) ·
+[Ollama](https://ollama.com/) · [ArduPilot](https://ardupilot.org/)
+
+## 문의
+
+**s1ns3nz0** · GitHub [@s1ns3nz0](https://github.com/s1ns3nz0) — 버그·제안은 각
+저장소의 Issues로.
