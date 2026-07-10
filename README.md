@@ -1,67 +1,99 @@
-# pollak-infra
+# 🛰️ pollak-infra
 
-Azure infrastructure-as-code for the **pollak** UAV cyber range. Owns every
-cloud resource for the three planes **and the seams between them**, because the
-cross-plane boundary is a security artifact that must be versioned and reviewed
-as one unit — not scattered across the three application repos.
+![Azure](https://img.shields.io/badge/Azure-IaC-0078D4?logo=microsoftazure&logoColor=white)
+![Bicep](https://img.shields.io/badge/Bicep-subscription--scope-00BCF2?logo=azuredevops&logoColor=white)
+![AKS](https://img.shields.io/badge/AKS-Kubernetes-326CE5?logo=kubernetes&logoColor=white)
+![Sentinel](https://img.shields.io/badge/Microsoft%20Sentinel-SIEM%2FSOAR-0078D4?logo=microsoft&logoColor=white)
+![Region](https://img.shields.io/badge/region-Korea%20Central%2FSouth-0078D4)
+![Loop](https://img.shields.io/badge/OCO%E2%86%94DCO-closed%20loop-e11d48)
 
-> **Related repos.** Red app (offensive agent + K8s overlays):
-> [fried-pollack-ai](https://github.com/s1ns3nz0/fried-pollack-ai) — public;
-> its `deploy/JUDGE-DEPLOY.md` is the reviewer runbook. SOC app: `pollack-ai`.
+**pollak** UAV 사이버 레인지를 위한 Azure 인프라(IaC). KUS-FS급 MUAV 임무
+시스템을 대상으로 공격 ↔ 방어를 하나의 폐루프로 돌리는 시뮬레이션 환경이다.
+이 저장소는 레인지 세 평면의 모든 클라우드 자원과 **평면 사이의 이음새(seam)** 를
+소유한다. 평면 경계는 그 자체로 보안 산출물이라 각 애플리케이션 저장소에
+흩뿌리지 않고 한 단위로 버전 관리·리뷰한다.
 
-## Why this repo exists
+## 🎯 레인지 개요
 
-The range is composed of three isolated planes, each its own AKS cluster / VNet
-/ resource group:
+레인지는 UAV 임무 시스템 전체(비행제어·데이터링크·GCS·ISR·무장·C4I — 13개
+컨테이너, 19종 `UAV*_CL` 로그 테이블)를 모사하고, 그 위에서 실제 공격 ↔ 방어
+루프를 돌린다. 작업은 세 개의 격리 평면으로 나뉘며, 각 평면은 독립된 AKS
+클러스터 / VNet / 리소스 그룹이다.
 
-| Plane | Cluster | Role | App repo |
+| 평면 | 클러스터 | 역할 | 교리 |
 |---|---|---|---|
-| red | `dah-red-aks` | attacker (offensive tooling) | `fried-pollack-ai` |
-| sim | `dah-sim-aks` | target range (UAV SITL, GCS, datalink) | sim repo |
-| soc | `dah-soc-aks` | defender (detection, dashboard) | `pollack-ai` |
+| 🔴 **red** | `dah-red-aks` | 공격 측 — 자율 레드팀 에이전트가 실제 공격 흐름 실행 | OCO |
+| 🟡 **sim** | `dah-sim-aks` | 표적 레인지 — UAV SITL·GCS·데이터링크·센서 | — |
+| 🔵 **soc** | `dah-soc-aks` | 방어 측 — 탐지·상관분석·대응·대시보드 | DCO |
 
-Threat model is a **real trust boundary**: red runs live exploit tooling, so a
-compromise must not reach sim/soc control planes, secrets, or nodes. Namespace
-separation is soft multi-tenancy and is *not* a trust boundary here — hence
-cluster-level isolation.
+red가 sim을 공격하고, sim은 공유 SIEM으로 텔레메트리를 흘리며, soc는 그
+텔레메트리로 탐지·대응한다. 두 에이전트가 하나의 폐루프를 이룬다 — 공격자의
+행동이 곧 방어자의 증거가 되며, **red↔soc 직접 네트워크 경로는 없다**.
 
-Several resources belong to **no single plane** and have no natural home in any
-app repo. They live here:
+위협 모델은 **실제 신뢰경계**다. red는 살아있는 공격 도구를 돌리므로, 침해가
+sim/soc의 제어평면·비밀·노드로 번져선 안 된다. 네임스페이스 분리는 약한
+멀티테넌시이며 여기서는 신뢰경계가 *아니다* — 그래서 평면 간에는 클러스터
+수준으로 격리한다.
 
-- red↔sim VNet peering + Azure Firewall egress allowlist (the attack path)
-- shared Azure Sentinel / Log Analytics workspace (sim tap writes append-only;
-  soc reads — the detection path, with **no** direct sim↔soc network peering)
-- private DNS zones (`*.pollak.store`, VNet-scoped split-horizon)
-- role assignments / RBAC that enforce the plane boundary
+## 🗂️ 저장소 생태계
 
-## Layout
+레인지는 여러 저장소로 구성된다. 이 저장소는 클라우드 인프라와 평면 이음새를
+담고, 애플리케이션 로직은 나머지 저장소에 있다.
+
+| 저장소 | 계층 | 담는 것 |
+|---|---|---|
+| [**pollak-infra**](https://github.com/s1ns3nz0/pollack-infra) | infra | 이 저장소 — 세 평면 전체의 Azure IaC + 평면 사이 이음새 |
+| [uav-sim-env](https://github.com/s1ns3nz0/uav-sim-env) | sim | KUS-FS급 MUAV SITL 레인지 (ArduPilot·13 컨테이너·19 `UAV*_CL` 테이블) |
+| [fried-pollack-ai](https://github.com/s1ns3nz0/fried-pollack-ai) | red | OCO 레드팀 에이전트 — 공격 도구 + K8s 오버레이 |
+| [pollack-ai](https://github.com/s1ns3nz0/pollack-ai) | soc | DCO-IDM 방어 AI SOC — 트리아지·상관분석·대응 |
+| [dah-sentinel-content](https://github.com/s1ns3nz0/dah-sentinel-content) | soc | Sentinel **Detection-as-Code** — 공유 SIEM을 탐지로 바꾸는 분석 룰 |
+
+**dah-sentinel-content** 는 이 저장소가 프로비저닝하는 `dah-data-law` Sentinel
+워크스페이스의 탐지 콘텐츠 계층이다. 분석 룰 167개(단일 시그널 `S*` 탐지
+131개 + 다단계 `C*` 캠페인 탐지 34개)에 헌팅 쿼리·파서·자동화 룰·플레이북·
+워치리스트·워크북을 더해 GitHub Actions로 워크스페이스에 배포한다. 여기 인프라가
+워크스페이스와 append-only 수집 경로를 만들고, 그 저장소가 UAV 공격에 발화하는
+KQL로 그 안을 채운다.
+
+## 🧩 이 저장소가 존재하는 이유
+
+어느 한 평면에도 속하지 않아 애플리케이션 저장소에 둘 자리가 없는 자원들이
+있다. 그것들이 여기 산다.
+
+- red↔sim VNet 피어링 + Azure Firewall 이그레스 허용목록 (공격 경로)
+- 공유 Azure Sentinel / Log Analytics 워크스페이스 `dah-data-law` — sim 탭은
+  append-only로 쓰고, soc는 읽는다 (탐지 경로, sim↔soc 직접 피어링 **없음**)
+- 프라이빗 DNS 존 (`*.pollak.store`, VNet 범위 split-horizon)
+- 평면 경계를 강제하는 역할 할당 / RBAC
+
+## 📁 구조
 
 ```
 bicep/
-  main.bicep          red plane (subscription-scope)
-  sim.bicep           sim plane (subscription-scope)
-  shared.bicep        cross-plane seam (shared SIEM workspace) (subscription-scope)
-  modules/
-    shared/           seam modules (log-analytics; DCR/RBAC next)
-    *.bicep           per-plane modules
-  params/
-    lab*.bicepparam   author's live environment
-    judge*.bicepparam reviewer Path B template (own subscription)
+  main.bicep          red 평면 (subscription 범위)
+  sim.bicep           sim 평면 (subscription 범위)
+  shared.bicep        평면 이음새 — 공유 SIEM 워크스페이스 (subscription 범위)
+  modules/            평면별 · 이음새 모듈
+  params/             lab*.bicepparam (작성자 환경) · judge*.bicepparam (리뷰어 템플릿)
 scripts/
-  deploy-red-with-sim.sh   idempotent sim(skip-if-exists)+red provisioning
+  deploy-red-with-sim.sh   멱등 sim(존재 시 건너뜀)+red 프로비저닝
 ```
 
-Deploy the shared seam once (before or alongside the planes):
+애플리케이션 계층의 Kubernetes 매니페스트(kustomize 오버레이)는 각
+애플리케이션 저장소에 남고, 여기에는 클라우드 인프라만 산다. GitOps 이미지
+태그 갱신은 앱 저장소에서 일어나며, Sentinel 탐지 콘텐츠는
+`dah-sentinel-content`에서 배포된다.
+
+## 🚀 배포
+
+이음새를 먼저 한 번 배포한다 (평면 배포 전 또는 동시에).
 
 ```bash
 az deployment sub create --location koreacentral \
   --template-file bicep/shared.bicep --parameters bicep/params/lab-shared.bicepparam
 ```
 
-App-layer Kubernetes manifests (kustomize overlays) stay in each app repo; only
-cloud infrastructure lives here. GitOps image-tag bumps happen in the app repos.
-
-## Deploy
+평면을 미리보기하고 프로비저닝한다.
 
 ```bash
 az deployment sub what-if --location koreacentral \
@@ -70,31 +102,20 @@ az deployment sub what-if --location koreacentral \
 scripts/deploy-red-with-sim.sh
 ```
 
-Reviewers deploying into their own subscription: copy `bicep/params/judge.bicepparam`,
-fill the `REPLACE_*` tokens, and point the scripts at it via `RED_PARAM_FILE` /
-`SIM_PARAM_FILE`. See the red app repo's `deploy/JUDGE-DEPLOY.md` for the full
-Path B runbook.
+**자기 구독에 배포하는 리뷰어 (Path B):** `bicep/params/judge.bicepparam`를
+복사해 `REPLACE_*` 토큰을 채우고, `RED_PARAM_FILE` / `SIM_PARAM_FILE`로
+스크립트를 그 파일에 물린다. 전체 런북은 red 앱 저장소의
+`deploy/JUDGE-DEPLOY.md` 참고.
 
-## Seam status
+레인지가 올라오면 탐지 콘텐츠는
+[dah-sentinel-content](https://github.com/s1ns3nz0/dah-sentinel-content)의
+GitHub Actions 파이프라인으로 `dah-data-law` 워크스페이스에 배포된다.
 
-Committed:
-- `modules/private-dns.bicep` — split-horizon `*.pollak.store` private zones
-- red↔sim / red↔soc VNet peering — in `modules/network-red.bicep` (gated on
-  `simVnetResourceId` / `enableSoc`)
-- `modules/shared/log-analytics.bicep` — the shared SIEM workspace
-  (detection-path decoupling point), RBAC-only, daily ingestion cap
-- `modules/shared/telemetry-ingest.bicep` — DCE + DCR + the four `UAV*_CL`
-  custom tables the tap emits, plus the append-only role assignments:
-  tap → Monitoring Metrics Publisher **on the DCR** (ingest only), SOC → Log
-  Analytics Reader **on the workspace** (query only). Red gets nothing here.
-- `shared.bicep` wires all of the above (subscription scope)
+---
 
-Wire-up pending (needs identities that don't exist until the sim/soc planes are
-built): pass `tapPrincipalId` / `socReaderPrincipalId` to `shared.bicep` once the
-tap and SOC managed identities exist — until then those role assignments are
-skipped (empty-guarded). Extend `tableSchemas` in `telemetry-ingest.bicep` as the
-tap emits more `UAV*_CL` tables.
-
-The red app repo's Tier-0 emulation (`run.py --emit-soc`) reproduces the same
-detection contract without deploying this pipeline; see that repo's
-`deploy/JUDGE-DEPLOY.md`.
+<sub>🌐 English summary: Azure infrastructure-as-code for the **pollak** UAV
+cyber range — a closed-loop OCO↔DCO simulation over a KUS-FS-class MUAV mission
+system. Owns all cloud resources for the red/sim/soc planes and the cross-plane
+seams (attack path, shared Sentinel workspace, private DNS, RBAC). Detection
+content ships from
+[dah-sentinel-content](https://github.com/s1ns3nz0/dah-sentinel-content).</sub>
