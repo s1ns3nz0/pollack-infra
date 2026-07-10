@@ -5,7 +5,10 @@
 ![AKS](https://img.shields.io/badge/AKS-Kubernetes-326CE5?logo=kubernetes&logoColor=white)
 ![Sentinel](https://img.shields.io/badge/Microsoft%20Sentinel-SIEM%2FSOAR-0078D4?logo=microsoft&logoColor=white)
 ![LangGraph](https://img.shields.io/badge/LangGraph-state%20machine-1C3C3C?logo=langchain&logoColor=white)
+![RAG](https://img.shields.io/badge/RAG-RAGFlow%2FGraphRAG-4B8BBE)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![Doctrine](https://img.shields.io/badge/doctrine-JP%2FCJCSI%2FDoDD-556B2F)
+![NIST](https://img.shields.io/badge/NIST-800--53%2F61%2FAI%20RMF-005288)
 ![Loop](https://img.shields.io/badge/OCO%E2%86%94DCO-closed%20loop-e11d48)
 ![Region](https://img.shields.io/badge/region-Korea%20Central%2FSouth-0078D4)
 
@@ -13,20 +16,62 @@
 폐루프로 돌리는** UAV 사이버 레인지다. 이 저장소(`pollak-infra`)는 그 레인지를
 띄우는 Azure 인프라(IaC)와 평면 사이 이음새를 소유한다.
 
-## 🧠 컨셉 — 왜 폐루프인가
+## 🧠 컨셉 — 교리를 코드로
 
-방어를 가정으로 평가하지 않기 위해서다. 공격 에이전트가 킬체인을 실행하면 UAV
-텔레메트리(`UAV*_CL`)가 남고, 방어 에이전트는 그 로그를 읽어 탐지·판정·대응한다.
-방어가 막은 단계와 놓친 단계가 다음 교전의 입력이 된다. **권투로 치면 실제
-스파링** — 이 반복이 지속 교전이다.
+설계의 출발점을 모델이 아니라 **조직과 교리**에 두었다. 핵심 원칙은 한 문장이다 —
+**"AI는 판단을 돕고, 권한은 코드와 정책이 쥔다."** AI는 참모이고, 방아쇠는 사람과
+코드가 쥔다. LLM은 계획 보조·결과 요약·근거 정리처럼 불확실성을 줄이는 일을 맡고,
+교전권한·물리 비가역 명령 승인·심각도 하한·정탐 판정·대응 실행 여부처럼 임무 안전과
+법적 책임이 걸린 결정은 **결정론 모듈과 HITL 게이트**가 처리한다.
 
-핵심은 두 에이전트가 **코드 파이프가 아니라 공유 스키마에서 닫힌다**는 점이다.
-방어측은 레드 코드를 import하지 않고 레드가 남긴 `*_CL` 행만 소비한다. 차단·거부된
-액션은 애초에 로그를 남기지 않으므로, **방어가 어느 단계에서 킬체인을 끊었는지가
-로그의 있고 없음만으로** 확인된다.
+미군 기준을 빌린 건 권위 차용이 아니라 이미 검증된 절차서를 재사용한 것이다. 작전
+논리는 미군 교리(JP·CJCSI·DoDD)에서, 사고대응·증거·통제 원칙은 NIST(SP 800-53·
+800-61·800-184·800-160v2·OSCAL·AI RMF)에서, 실행 자동화는 CNCF 클라우드 네이티브
+스택과 LangGraph에서 가져왔다.
 
-LLM은 이 구조에서 중앙 지휘자가 아니다. LangGraph 상태머신·정책 게이트·RAG·
-Sentinel 브리지·GitOps 배포면 사이에 놓인, **언제든 교체 가능한 부품**이다.
+**조직 분리가 첫 설계 결정.** USCYBERCOM 사이버임무군(CMF)은 공세 전력(OCO —
+NMT·CNMF·CMT)과 방어 전력(DCO-IDM — CPT)을 애초에 나눈다. 이 공수 분리를 그대로
+가져와 공격 `fried-pollack-ai`와 방어 `pollack-ai`를 별도 저장소·별도 런타임으로
+쪼갰다. 방어측은 레드 코드를 import하지 않고 두 에이전트는 UAV*_CL 텔레메트리
+스키마로만 만난다 — 공격자가 방어측 답안지를 커닝해 회피에 최적화되는 경로를 원천
+차단한다.
+
+### 교리 → 코드 매핑
+
+| 교리·조직 근거 | 코드 구현 |
+|---|---|
+| JP 3-12 · OCO/DCO/DODIN 분리 | 저장소 분리, UAV*_CL one-way 브릿지 |
+| JP 3-60 · 표적화(CARVER·HPTL) | red `planner`, `targeting/carver.py`·`prioritize.py` |
+| F3EAD 순환 | red 그래프 노드 순서(recon→…→reporter) |
+| SROE·CDE·PID·JCEOI | `checker`·`broker`·`roe_gate.py`·`engagement/gate.py` |
+| DoDD 3000.09 · 인간판단·중지 | HITL interrupt, 단발 토큰, out-of-band 검증 |
+| CPT · Detect~Assess 순환 | blue 6-에이전트 SOC 그래프 |
+
+### AI Engineering 다섯 계층
+
+임무 절차를 **타입이 정해진 상태머신**으로 만들고 그 안에 LLM을 제한된 부품으로
+배치한다. 공정 라인처럼 각 계층이 한 가지 안전 역할만 맡는다.
+
+| 계층 | 목적 | 구현 요소 |
+|---|---|---|
+| **Agent workflow** | 교리 절차를 상태 전이로 고정 | LangGraph, `SOCState`, red/blue 그래프 빌더 |
+| **Tool boundary** | LLM의 직접 위험행위 차단 | FastMCP, kagent, coarse-grained MCP, allowlist |
+| **Knowledge grounding** | 근거 검색은 허용, 판정권은 불허 | RAGFlow, 로컬 GraphRAG, `RetrievedChunk` |
+| **Decision control** | 안전·법적 결정을 모델 밖으로 | `SeverityEngine`, signal judge, HITL, CACAO/런북 |
+| **Evaluation & Ops** | 재현성·관측성·배포 무결성 | golden fixture, OpenTelemetry, Argo CD drift |
+
+LLM은 다섯 계층 어디에서도 최종 권한을 갖지 않는다. `core/llm.py`의 `LLMClient`
+프로토콜 뒤에 있으며, 현재 Ollama `qwen2.5`이고 Azure OpenAI(GPT-4o)는 같은
+프로토콜을 구현하는 교체 지점으로 남겨 뒀다. **모델을 바꿔도 상태·정책·게이트
+경계는 그대로다** — "모델은 교체 가능한 부품"의 실제 의미다.
+
+### 폐루프 교전
+
+두 에이전트는 **코드 파이프가 아니라 공유 스키마에서 닫힌다.** 공격이 킬체인을
+실행하면 UAV*_CL 텔레메트리가 남고, 방어는 그 로그를 읽어 탐지·판정·대응하며,
+막은 단계와 놓친 단계가 다음 교전의 입력이 된다(권투의 실제 스파링). 차단·거부된
+액션은 로그를 남기지 않으므로 **방어가 어느 단계에서 킬체인을 끊었는지가 로그의
+있고 없음만으로** 확인된다.
 
 ```mermaid
 flowchart LR
