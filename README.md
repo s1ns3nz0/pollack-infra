@@ -36,12 +36,22 @@ app repo. They live here:
 bicep/
   main.bicep          red plane (subscription-scope)
   sim.bicep           sim plane (subscription-scope)
-  modules/            per-plane + shared modules
+  shared.bicep        cross-plane seam (shared SIEM workspace) (subscription-scope)
+  modules/
+    shared/           seam modules (log-analytics; DCR/RBAC next)
+    *.bicep           per-plane modules
   params/
     lab*.bicepparam   author's live environment
     judge*.bicepparam reviewer Path B template (own subscription)
 scripts/
   deploy-red-with-sim.sh   idempotent sim(skip-if-exists)+red provisioning
+```
+
+Deploy the shared seam once (before or alongside the planes):
+
+```bash
+az deployment sub create --location koreacentral \
+  --template-file bicep/shared.bicep --parameters bicep/params/lab-shared.bicepparam
 ```
 
 App-layer Kubernetes manifests (kustomize overlays) stay in each app repo; only
@@ -61,9 +71,19 @@ fill the `REPLACE_*` tokens, and point the scripts at it via `RED_PARAM_FILE` /
 `SIM_PARAM_FILE`. See the red app repo's `deploy/JUDGE-DEPLOY.md` for the full
 Path B runbook.
 
-## Not yet coded
+## Seam status
 
-The cross-plane seam resources (shared Sentinel workspace, sim↔workspace DCR
-ingestion, red↔sim peering hardening) are designed but not all committed here
-yet. `bicep/modules/private-dns.bicep` is the first seam resource; peering and
-the Sentinel workspace land as `modules/shared/` next.
+Committed:
+- `modules/private-dns.bicep` — split-horizon `*.pollak.store` private zones
+- red↔sim / red↔soc VNet peering — in `modules/network-red.bicep` (gated on
+  `simVnetResourceId` / `enableSoc`)
+- `modules/shared/log-analytics.bicep` + `shared.bicep` — the shared SIEM
+  workspace (detection-path decoupling point), append-only intent documented
+
+Not yet coded:
+- the Data Collection Rule + `UAV*_CL` custom-table schema for the sim tap
+- the tap (Monitoring Metrics Publisher on the DCR) and SOC (Log Analytics
+  Reader) role assignments that enforce append-only at the data layer
+
+Until the DCR lands, the detection contract is reproduced by the red app repo's
+Tier-0 emulation (`run.py --emit-soc`); see that repo's `deploy/JUDGE-DEPLOY.md`.
