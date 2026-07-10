@@ -5,6 +5,10 @@ cloud resource for the three planes **and the seams between them**, because the
 cross-plane boundary is a security artifact that must be versioned and reviewed
 as one unit — not scattered across the three application repos.
 
+> **Related repos.** Red app (offensive agent + K8s overlays):
+> [fried-pollack-ai](https://github.com/s1ns3nz0/fried-pollack-ai) — public;
+> its `deploy/JUDGE-DEPLOY.md` is the reviewer runbook. SOC app: `pollack-ai`.
+
 ## Why this repo exists
 
 The range is composed of three isolated planes, each its own AKS cluster / VNet
