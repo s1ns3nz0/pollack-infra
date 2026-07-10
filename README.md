@@ -184,6 +184,18 @@ cd pollack-infra
 bash scripts/deploy-judge-demo.sh
 ```
 
+배포가 끝나면 **스크립트가 출력한 결과의 주소를 우선 사용하세요.** 기본 로컬
+포트포워딩 주소는 다음과 같습니다.
+
+| 대시보드 | 기본 주소 |
+|---|---|
+| KPI Dashboard | `http://localhost:18082/kpi-dashboard.html` |
+| kagent UI | `http://localhost:18080` |
+| Argo CD (설치 시) | `https://localhost:18081` |
+
+Azure 리소스의 Portal 링크와 실제 포트는 배포 환경에 따라 달라질 수 있으므로,
+풀 배포 후 터미널에 표시된 스크립트 결과를 확인하세요.
+
 > 풀 배포는 실제 Azure 과금 리소스를 생성합니다. 데모 후 리소스 그룹을
 > 수동 삭제하고, 상세 절차는 `fried-pollack-ai/deploy/JUDGE-DEPLOY.md`를 확인하세요.
 
