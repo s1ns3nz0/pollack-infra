@@ -27,6 +27,10 @@ echo "workspaceId=$WORKSPACE_ID"
 echo "== 2/5 aoai (Azure OpenAI) =="
 az group create -n "$SOC_RG" -l "$LOCATION" -o none
 az deployment group create -g "$SOC_RG" -n aoai-mvp -f bicep/planes/aoai.bicep -o none
+# aoai 계정명/엔드포인트를 red 배포로 전달(red 는 kagent OpenAI 역할할당에 이 계정을 참조).
+AOAI_ACCT="$(az deployment group show -g "$SOC_RG" -n aoai-mvp --query properties.outputs.accountName.value -o tsv)"
+AOAI_ENDPOINT="$(az deployment group show -g "$SOC_RG" -n aoai-mvp --query properties.outputs.endpoint.value -o tsv)"
+echo "aoai account=$AOAI_ACCT"
 
 echo "== 3/5 sim-aks (dah-sim-aks) =="
 az group create -n "$SIM_RG" -l "$LOCATION" -o none
@@ -40,6 +44,9 @@ az deployment group create -g "$SOC_RG" -n soc-mvp -f bicep/planes/soc.bicep \
 echo "== 5/5 red plane (subscription-scope) =="
 az deployment sub create --location "$LOCATION" \
   --template-file bicep/main.bicep --parameters "$RED_PARAM_FILE" \
+  azureOpenAIResourceGroupName="$SOC_RG" \
+  azureOpenAIAccountName="$AOAI_ACCT" \
+  azureOpenAIEndpoint="$AOAI_ENDPOINT" \
   --query '{state:properties.provisioningState}' -o json
 
 if [ "$DEPLOY_SIM_VM" = "true" ]; then
