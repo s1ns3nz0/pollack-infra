@@ -92,4 +92,14 @@ assert_eq \
   "$(paste -sd' ' "$command_log")" \
   'for launcher stage order'
 
+launcher="$(<"$SCRIPT_DIR/../deploy-judge-demo.sh")"
+stop_script="$(<"$SCRIPT_DIR/../stop-judge-demo.sh")"
+assert_contains "$launcher" 'SOC_REPO='
+assert_contains "$launcher" 'INSTALL_ARGOCD="${INSTALL_ARGOCD:-true}"'
+assert_contains "$launcher" 'uvicorn app.dashboard:app'
+assert_contains "$launcher" '--port 18083'
+assert_contains "$launcher" 'http://localhost:18083'
+assert_contains "$launcher" 'Cyber Staff Dashboard'
+assert_contains "$stop_script" 'cyber-staff-dashboard'
+
 echo 'judge demo tests passed'

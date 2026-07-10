@@ -7,8 +7,9 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/lib/judge-demo.sh"
 
 APP_REPO="${APP_REPO:-$REPO_ROOT/../fried-pollack-ai}"
+SOC_REPO="${SOC_REPO:-$REPO_ROOT/../pollack-ai}"
 TOOLSERVER_TAG="${TOOLSERVER_TAG:-judge-$(git -C "$APP_REPO" rev-parse --short HEAD 2>/dev/null || printf current)}"
-INSTALL_ARGOCD="${INSTALL_ARGOCD:-false}"
+INSTALL_ARGOCD="${INSTALL_ARGOCD:-true}"
 DATA_RG="${DATA_RG:-dah-data-rg}"
 SOC_RG="${SOC_RG:-dah-soc-rg}"
 SIM_RG="${SIM_RG:-dah-sim-rg}"
@@ -42,6 +43,14 @@ for command_name in az kubectl kubelogin helm curl python git; do
 done
 [[ -f "$APP_REPO/scripts/bootstrap-red-agent.sh" ]] || {
   echo "fried-pollack-ai checkout not found at $APP_REPO (override APP_REPO)" >&2
+  exit 1
+}
+[[ -f "$SOC_REPO/app/dashboard.py" ]] || {
+  echo "pollack-ai checkout not found at $SOC_REPO (override SOC_REPO)" >&2
+  exit 1
+}
+(cd "$SOC_REPO" && python -c 'import fastapi, uvicorn, app.dashboard') || {
+  echo "pollack-ai dashboard dependencies are missing; run: python -m pip install -e '$SOC_REPO'" >&2
   exit 1
 }
 
@@ -105,7 +114,11 @@ record_stage bootstrap
 
 if [[ "$INSTALL_ARGOCD" == true ]]; then
   echo "== Judge demo: install ArgoCD =="
-  (cd "$APP_REPO" && RED_ACR_NAME="$RED_ACR_NAME" bash scripts/bootstrap-argocd.sh)
+  (
+    cd "$APP_REPO"
+    ACR_NAME="$RED_ACR_NAME" ACR_LOGIN_SERVER="$RED_ACR_LOGIN_SERVER" \
+      bash scripts/bootstrap-argocd.sh
+  )
   kubectl apply -f "$APP_REPO/deploy/argocd/root-app.yaml"
 fi
 
@@ -120,6 +133,8 @@ start_owned_process kagent-ui "$JUDGE_DEMO_RUNTIME_DIR/kagent-ui.log" \
   --address 127.0.0.1 service/kagent-ui 18080:8080
 start_owned_process kpi-dashboard "$JUDGE_DEMO_RUNTIME_DIR/kpi-dashboard.log" \
   python -m http.server 18082 --bind 127.0.0.1 --directory "$APP_REPO/out"
+start_owned_process cyber-staff-dashboard "$JUDGE_DEMO_RUNTIME_DIR/cyber-staff-dashboard.log" \
+  sh -c 'cd "$1" && exec uvicorn app.dashboard:app --host 127.0.0.1 --port 18083' sh "$SOC_REPO"
 
 ARGOCD_STATUS=SKIP
 if kubectl -n argocd get service argocd-server >/dev/null 2>&1; then
@@ -153,6 +168,8 @@ MCP_TOOLS="$(kubectl -n fried-pollack get remotemcpserver fried-pollack-toolserv
 [[ " $MCP_TOOLS " == *' run_engagement '* ]]
 wait_for_http http://127.0.0.1:18080 false 60
 wait_for_http http://127.0.0.1:18082/kpi-dashboard.html false 30
+wait_for_http http://127.0.0.1:18083 false 30
+curl -fsS http://127.0.0.1:18083 | grep -q '사이버 작전 참모 상황판'
 if [[ "$ARGOCD_STATUS" == READY ]]; then
   wait_for_http https://127.0.0.1:18081 true 60
 fi
@@ -165,6 +182,7 @@ cat <<EOF
 Local dashboards
   READY  kagent UI       http://localhost:18080
   READY  KPI Dashboard  http://localhost:18082/kpi-dashboard.html
+  READY  Cyber Staff Dashboard http://localhost:18083
 EOF
 if [[ "$ARGOCD_STATUS" == READY ]]; then
   echo "  READY  ArgoCD         https://localhost:18081"
@@ -198,7 +216,7 @@ Logs and lifecycle
   Deploy log         $DEPLOY_LOG
   Bootstrap log      $BOOTSTRAP_LOG
   Stop dashboards    bash scripts/stop-judge-demo.sh
-  Azure teardown     manual; stopping dashboards does not delete billable resources
+  Azure teardown     bash scripts/destroy-all.sh (plan), then rerun with --execute --subscription $SUBSCRIPTION_ID
 
 Subscription: $SUBSCRIPTION_ID
 EOF

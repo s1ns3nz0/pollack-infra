@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=lib/quota.sh
 source "$SCRIPT_DIR/lib/quota.sh"
+# shellcheck source=lib/aoai.sh
+source "$SCRIPT_DIR/lib/aoai.sh"
 cd "$REPO_ROOT"
 
 # Full-stack range deploy in dependency order. Consolidated from uav-sim-env
@@ -67,6 +69,7 @@ echo "workspaceId=$WORKSPACE_ID"
 
 echo "== 2/5 aoai (Azure OpenAI) =="
 az group create -n "$SOC_RG" -l "$LOCATION" -o none
+recover_deleted_aoai_accounts "$SOC_RG" "$LOCATION"
 az deployment group create -g "$SOC_RG" -n aoai-mvp -f bicep/planes/aoai.bicep -o none
 # aoai 계정명/엔드포인트를 red 배포로 전달(red 는 kagent OpenAI 역할할당에 이 계정을 참조).
 AOAI_ACCT="$(az deployment group show -g "$SOC_RG" -n aoai-mvp --query properties.outputs.accountName.value -o tsv)"
