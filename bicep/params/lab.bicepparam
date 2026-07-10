@@ -30,6 +30,13 @@ param aksRbacClusterAdminObjectIds = [
   '8b7bc0ba-9019-4ca0-924e-821e8872f2ea'
 ]
 
+// Keep the complete two-pool red topology within the lab subscription's
+// 20-vCPU Korea Central quota.
+param redSystemNodeSize = 'Standard_D2s_v5'
+param redSystemNodeCount = 1
+param redUserNodeSize = 'Standard_D2s_v5'
+param redUserNodeCount = 1
+
 param azureOpenAIResourceGroupName = 'dah-soc-rg'
 param azureOpenAIAccountName = 'dah-aoai-kzjpmnfl4iwvg'
 param azureOpenAIEndpoint = 'https://dah-aoai-kzjpmnfl4iwvg.openai.azure.com/'

@@ -25,7 +25,7 @@ param modelVersion string = '2024-07-18'
 
 @description('Deployment SKU. Standard = regional data only (preferred for defence work); GlobalStandard uses the global pool.')
 @allowed([ 'Standard', 'GlobalStandard', 'DataZoneStandard' ])
-param deploymentSkuName string = 'Standard'
+param deploymentSkuName string = 'GlobalStandard'   // koreacentral: gpt-4o-mini offers GlobalStandard, not regional Standard
 
 @description('Deployment capacity in K-tokens-per-minute units. 30 = 30,000 TPM.')
 @minValue(1)

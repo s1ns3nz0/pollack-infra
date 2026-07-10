@@ -24,6 +24,22 @@ param authorizedIpRanges array
 @description('Microsoft Entra object IDs granted Azure Kubernetes Service RBAC Cluster Admin on the red AKS cluster.')
 param aksRbacClusterAdminObjectIds array = []
 
+@description('VM size for the red AKS system node pool.')
+param redSystemNodeSize string = 'Standard_D4s_v5'
+
+@description('Node count for the red AKS system node pool.')
+@minValue(1)
+@maxValue(5)
+param redSystemNodeCount int = 1
+
+@description('VM size for the red-agent workload node pool.')
+param redUserNodeSize string = 'Standard_D4s_v5'
+
+@description('Node count for the red-agent workload node pool.')
+@minValue(1)
+@maxValue(5)
+param redUserNodeCount int = 1
+
 @description('Extra egress FQDNs allowed through the firewall (Azure OpenAI, approved sim endpoints).')
 param allowedEgressFqdns array = [
   '*.openai.azure.com'
@@ -169,6 +185,10 @@ module aks 'modules/aks-red.bicep' = {
     authorizedIpRanges: union(authorizedIpRanges, [
       '${firewall.outputs.firewallPublicIp}/32'
     ])
+    systemNodeSize: redSystemNodeSize
+    systemNodeCount: redSystemNodeCount
+    userNodeSize: redUserNodeSize
+    userNodeCount: redUserNodeCount
     tags: commonTags
   }
 }
